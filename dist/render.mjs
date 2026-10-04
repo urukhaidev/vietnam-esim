@@ -1,0 +1,16 @@
+export const telegram='https://t.me/+owWKco6w-n4yZjZi';
+export const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n)+' ₽';
+export const day=n=>`${n} ${n%10===1&&n%100!==11?'день':n%10>=2&&n%10<=4&&!(n%100>=12&&n%100<=14)?'дня':'дней'}`;
+export const volume=p=>p.type==='unlimited'?'Безлимит':(p.mb<1024?`${p.mb} МБ`:`${new Intl.NumberFormat('ru-RU').format(p.mb/1024)} ГБ`)+(p.type==='daily'?' / день':'');
+const network=p=>p.networks.map(n=>n.operator.replace(' Mobile','')).join(' · ');
+function details(p){
+  return `<dl class="conditions"><div><dt>Сети</dt><dd>${escape(network(p))}</dd></div><div><dt>Скорость</dt><dd>${escape(p.speed)}</dd></div><div><dt>Раздача интернета</dt><dd>${p.tethering===true?'Разрешена':p.tethering===false?'Не поддерживается':'Уточните при оформлении'}</dd></div><div><dt>Начало срока</dt><dd>${p.activation.billing_starts==='First Network Connection'?'При первом подключении к сети':escape(p.activation.billing_starts||'Уточните при оформлении')}</dd></div><div><dt>Установка заранее</dt><dd>${p.activation.pre_install_days?`До ${p.activation.pre_install_days} дней`:'Уточните при оформлении'}</dd></div><div><dt>Пополнение</dt><dd>${p.topup?'Поддерживается':'Не поддерживается'}</dd></div><div><dt>Регион IP</dt><dd>${escape(p.ip.join(', ')||'Не указан')}</dd></div></dl>${p.info?`<p>${escape(p.info)}</p>`:''}<small class="plan-code">Код: ${escape(p.code)}</small>`;
+}
+export function card(p,trip=7){
+  const days=p.duration.configurable?Math.min(p.duration.maximum_days,Math.max(p.duration.minimum_days,trip)):p.days;
+  const total=p.price*(p.billing==='day'?days:1);
+  const unlimited=p.type==='unlimited';
+  const f=p.fairUse;
+  return `<article class="plan ${unlimited?'unlimited':''}"><div class="plan-top"><span>${unlimited?'БЕЗЛИМИТНЫЙ ИНТЕРНЕТ':'ВЬЕТНАМ · eSIM'}</span><span aria-hidden="true">${unlimited?'∞':'↗'}</span></div><h3>${volume(p)}</h3><p class="plan-duration">${p.duration.configurable?'На '+day(days):day(days)}${p.duration.configurable?' · срок на выбор':''}</p><p class="networks">${escape(network(p))}</p><p class="allowance">${f?`${escape(f.high_speed_data_gb_per_day)} ГБ/день на полной скорости,<br>затем до ${escape(f.reduced_speed_mbps)} Мбит/с`:p.type==='daily'?'Объём обновляется каждый день':'Весь трафик на срок пакета'}</p><div class="plan-price"><strong>${money(total)}</strong><span>${p.billing==='day'?money(p.price)+' / день':p.variants.length>1?'от · '+p.variants.length+' варианта':'за весь пакет'}</span></div><a class="button ${unlimited?'button-dark':'button-outline'}" href="${telegram}" target="_blank" rel="noopener" aria-label="Оформить ${volume(p)} на ${day(days)} в Telegram">Оформить в Telegram <span aria-hidden="true">↗</span></a><details class="plan-details"><summary>${p.variants.length>1?'Условия и '+p.variants.length+' варианта':'Условия тарифа'}</summary>${p.variants.map((v,i)=>`<div class="variant">${p.variants.length>1?`<b>Вариант ${i+1} · ${money(v.price*(v.billing==='day'?days:1))}</b>`:''}${details(v)}</div>`).join('')}</details></article>`;
+}
